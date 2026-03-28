@@ -1,0 +1,12 @@
+Package: com.yourname.yttweak
+Name: YTTweak
+Version: 1.0.0
+Architecture: iphoneos-arm
+Description: A flexible enhancer for YouTube on iOS.
+  Blocks ads, enables background playback, OLED mode,
+  removes tab bar clutter, and more — all configurable
+  from within YouTube Settings.
+Maintainer: Your Name <you@example.com>
+Author: Your Name <you@example.com>
+Section: Tweaks
+Depends: mobilesubstrate | substitute | libhooker
