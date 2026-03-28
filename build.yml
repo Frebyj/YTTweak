@@ -1,12 +1,3 @@
-# .github/workflows/build.yml
-# Builds a sideloadable YouTube Plus IPA using GitHub Actions.
-# Mirrors the approach used by YTLite / YouTube Plus.
-#
-# How to use:
-#   1. Fork this repository
-#   2. Go to Actions → "Build YouTube Tweak IPA"
-#   3. Click "Run workflow" and fill in the inputs
-
 name: Build YouTube Tweak IPA
 
 on:
@@ -16,95 +7,20 @@ on:
         description: "Direct URL to a decrypted YouTube IPA"
         required: true
         type: string
-      tweak_version:
-        description: "YTTweak release tag (e.g. 1.0.0)"
-        required: false
-        default: "latest"
-        type: string
-      bundle_id:
-        description: "Custom bundle ID (leave blank to keep original)"
-        required: false
-        default: "com.google.ios.youtube"
-        type: string
-      display_name:
-        description: "App display name override"
-        required: false
-        default: "YouTube"
-        type: string
-      enable_sideloading_patches:
-        description: "Apply sideloading compatibility patches"
-        required: false
-        default: true
-        type: boolean
 
 jobs:
   build:
-    name: Patch & Package IPA
     runs-on: macos-latest
-
     steps:
-      # ── 1. Checkout source ────────────────────────────────────────────────
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v3
 
-      # ── 2. Install Theos ──────────────────────────────────────────────────
-      - name: Install Theos
-        run: |
-          bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
-          echo "THEOS=$HOME/theos" >> $GITHUB_ENV
-
-      # ── 3. Download decrypted YouTube IPA ────────────────────────────────
       - name: Download YouTube IPA
-        run: |
-          echo "Downloading IPA from: ${{ inputs.ipa_url }}"
-          curl -L "${{ inputs.ipa_url }}" -o YouTube.ipa
-          ls -lh YouTube.ipa
+        run: curl -L "${{ github.event.inputs.ipa_url }}" -o YouTube.ipa
 
-      # ── 4. Extract IPA ────────────────────────────────────────────────────
       - name: Extract IPA
-        run: |
-          mkdir -p Payload
-          unzip -q YouTube.ipa -d extracted_ipa
-          ls extracted_ipa/Payload/
+        run: unzip -q YouTube.ipa -d extracted_ipa
 
-      # ── 5. Build the tweak dylib ──────────────────────────────────────────
-      - name: Build YTTweak dylib
-        run: |
-          cd $GITHUB_WORKSPACE
-          make THEOS=$HOME/theos package
-          ls -lh packages/
-
-      # ── 6. Inject dylib into app bundle ───────────────────────────────────
-      - name: Inject tweak into app bundle
-        run: |
-          APP_PATH=$(ls extracted_ipa/Payload/*.app)
-          DYLIB=$(ls packages/*.deb | head -1)
-
-          # Extract dylib from .deb
-          dpkg-deb -x "$DYLIB" deb_extracted
-          TWEAK_DYLIB=$(find deb_extracted -name "*.dylib" | head -1)
-
-          echo "Injecting $TWEAK_DYLIB → $APP_PATH"
-          cp "$TWEAK_DYLIB" "$APP_PATH/Frameworks/"
-
-          # Patch load commands with insert_dylib or optool
-          brew install insert_dylib || true
-          insert_dylib --strip-codesig --inplace \
-            "@executable_path/Frameworks/$(basename $TWEAK_DYLIB)" \
-            "$APP_PATH/$(basename $APP_PATH .app)"
-
-      # ── 7. Override bundle ID / display name (optional) ───────────────────
-      - name: Override bundle ID and display name
-        if: ${{ inputs.bundle_id != 'com.google.ios.youtube' || inputs.display_name != 'YouTube' }}
-        run: |
-          APP_PATH=$(ls extracted_ipa/Payload/*.app)
-          PLIST="$APP_PATH/Info.plist"
-          /usr/libexec/PlistBuddy -c \
-            "Set :CFBundleIdentifier ${{ inputs.bundle_id }}" "$PLIST"
-          /usr/libexec/PlistBuddy -c \
-            "Set :CFBundleDisplayName ${{ inputs.display_name }}" "$PLIST"
-
-      # ── 8. Repackage into IPA ─────────────────────────────────────────────
       - name: Repackage IPA
         run: |
           cd extracted_ipa
@@ -112,10 +28,9 @@ jobs:
           cd ..
           ls -lh YouTubeTweak.ipa
 
-      # ── 9. Upload as artifact ─────────────────────────────────────────────
-      - name: Upload patched IPA
-        uses: actions/upload-artifact@v4
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v3
         with:
-          name: YouTubeTweak-${{ inputs.tweak_version }}.ipa
+          name: YouTubeTweak
           path: YouTubeTweak.ipa
           retention-days: 7
