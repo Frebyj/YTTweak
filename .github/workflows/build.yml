@@ -1,0 +1,31 @@
+name: Build YouTube Tweak IPA
+
+on:
+  workflow_dispatch:
+    inputs:
+      ipa_url:
+        description: "Direct URL to a decrypted YouTube IPA"
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download YouTube IPA
+        run: curl -L "${{ github.event.inputs.ipa_url }}" -o YouTube.ipa
+
+      - name: Extract IPA
+        run: unzip -q YouTube.ipa -d extracted_ipa
+
+      - name: Repackage IPA
+        run: cd extracted_ipa && zip -qr ../YouTubeTweak.ipa Payload && cd ..
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: YouTubeTweak.ipa
+          path: YouTubeTweak.ipa
+          retention-days: 7
