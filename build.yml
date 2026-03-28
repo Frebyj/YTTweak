@@ -13,7 +13,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Download YouTube IPA
         run: curl -L "${{ github.event.inputs.ipa_url }}" -o YouTube.ipa
@@ -21,15 +21,21 @@ jobs:
       - name: Extract IPA
         run: unzip -q YouTube.ipa -d extracted_ipa
 
-      - name: Repackage IPA
+      - name: Verify bundle ID is correct
+        run: |
+          APP_PATH=$(ls extracted_ipa/Payload/*.app)
+          BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP_PATH/Info.plist")
+          echo "Bundle ID: $BUNDLE_ID"
+
+      - name: Repackage IPA keeping original bundle ID
         run: |
           cd extracted_ipa
           zip -qr ../YouTubeTweak.ipa Payload
           cd ..
           ls -lh YouTubeTweak.ipa
 
-      - name: Upload IPA artifact
-        uses: actions/upload-artifact@v3
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
           name: YouTubeTweak
           path: YouTubeTweak.ipa
